@@ -1,4 +1,3 @@
-// Loading the data
 d3.csv("temperature_daily.csv").then(data => {
     data.forEach(d => {
         d.date = new Date(d.date);
@@ -23,17 +22,21 @@ d3.csv("temperature_daily.csv").then(data => {
     );
 
     let years = Array.from(new Set(data.map(d => d.year))).sort();
-    let months = Array.from({ length: 12 }, (_, i) => i + 1);
+    let months = [
+        "January", "February", "March", "April", "May", "June", 
+        "July", "August", "September", "October", "November", "December"
+    ];
 
-    let cellSize = 30;
-    let width = cellSize * years.length;
-    let height = cellSize * months.length;
+    let cellSize = 35;
+    let margin = { top: 50, right: 20, bottom: 30, left: 100 };
+    let width = cellSize * years.length + margin.left + margin.right;
+    let height = cellSize * months.length + margin.top + margin.bottom;
 
     let svg = d3.select("#heatmap")
-        .attr("width", width + 100)
-        .attr("height", height + 80)
+        .attr("width", width)
+        .attr("height", height)
         .append("g")
-        .attr("transform", "translate(50,30)");
+        .attr("transform", `translate(${margin.left},${margin.top})`);
 
     let colorScale = d3.scaleSequential(d3.interpolateOrRd)
         .domain([10, 35]);
@@ -48,10 +51,11 @@ d3.csv("temperature_daily.csv").then(data => {
             .selectAll("text")
             .data(years)
             .enter().append("text")
-            .attr("x", (d, i) => i * cellSize + 10)
-            .attr("y", -8)
+            .attr("x", (d, i) => i * cellSize + cellSize / 2)
+            .attr("y", -10)
             .attr("text-anchor", "middle")
-            .style("font-size", "10px")
+            .style("font-size", "12px")
+            .style("font-weight", "bold")
             .text(d => d);
 
         // Add month labels
@@ -59,28 +63,29 @@ d3.csv("temperature_daily.csv").then(data => {
             .selectAll("text")
             .data(months)
             .enter().append("text")
-            .attr("x", -5)
-            .attr("y", d => (d - 1) * cellSize + 15)
+            .attr("x", -10)
+            .attr("y", (d, i) => i * cellSize + cellSize / 1.5)
             .attr("text-anchor", "end")
             .style("font-size", "12px")
+            .style("font-weight", "bold")
             .text(d => d);
 
         let tooltip = d3.select("#tooltip");
 
         // Draw heatmap cells
         svg.selectAll(".cell")
-            .data(years.flatMap(year => months.map(month => ({ year, month }))))
+            .data(years.flatMap(year => months.map((month, i) => ({ year, month, monthIndex: i + 1 }))))
             .enter().append("rect")
             .attr("x", d => years.indexOf(d.year) * cellSize)
-            .attr("y", d => (d.month - 1) * cellSize)
+            .attr("y", d => d.monthIndex * cellSize - cellSize)
             .attr("width", cellSize - 2)
             .attr("height", cellSize - 2)
             .attr("fill", d => {
-                let temp = nestedData.get(d.year)?.get(d.month)?.[currentMetric];
+                let temp = nestedData.get(d.year)?.get(d.monthIndex)?.[currentMetric];
                 return temp ? colorScale(temp) : "#ddd";
             })
             .on("mouseover", (event, d) => {
-                let temp = nestedData.get(d.year)?.get(d.month)?.[currentMetric];
+                let temp = nestedData.get(d.year)?.get(d.monthIndex)?.[currentMetric];
                 if (temp) {
                     tooltip.style("display", "block")
                         .style("left", (event.pageX + 10) + "px")
@@ -100,8 +105,12 @@ d3.csv("temperature_daily.csv").then(data => {
         legend.enter().append("div")
             .merge(legend)
             .style("background", d => colorScale(d))
-            .style("width", "30px")
+            .style("width", "40px")
             .style("height", "20px")
+            .style("display", "inline-block")
+            .style("text-align", "center")
+            .style("color", "#fff")
+            .style("font-size", "12px")
             .text(d => d + "°C");
     }
 
